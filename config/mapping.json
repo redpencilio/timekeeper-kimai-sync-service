@@ -1,0 +1,45 @@
+{
+  "customers": {
+    "graph": "http://mu.semte.ch/graphs/test",
+    "resourceName": "customers",
+    "attributes": {
+      "name": {
+        "resourceName": "name"
+      },
+      "color": {
+        "resourceName": "color"
+      }
+    }
+  },
+  "projects": {
+    "graph": "http://mu.semte.ch/graphs/test",
+    "resourceName": "tasks",
+    "attributes": {
+      "name": {
+        "resourceName": "name"
+      },
+      "color": {
+        "resourceName": "color"
+      }
+    },
+    "relationships": {
+      "customer": {
+        "resourceName": "customer"
+      }
+    }
+  },
+  "activities": {
+    "graph": "http://mu.semte.ch/graphs/test",
+    "resourceName": "tasks",
+    "attributes": {
+      "name": {
+        "resourceName": "name"
+      }
+    },
+    "relationships": {
+      "project": {
+        "resourceName": "parent"
+      }
+    }
+  }
+}
