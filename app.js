@@ -1,37 +1,28 @@
-import { app } from "mu";
-import { updateEntitiesProperties, updateEntityRelationships } from "./sparql";
-import { getDataOfType } from "./kimai";
+import { app } from 'mu';
+import { fetchList } from './kimai';
+import { upsertResource } from './import';
+import { API_TOKEN, KIMAI_ENDPOINT } from './constants';
 
-app.get("/hello", function (req, res) {
-  res.send("Hello mu-javascript-template");
+console.log(`Kimai API connection config:
+- Endpoint: ${KIMAI_ENDPOINT}
+- API Token: ${API_TOKEN}
+`);
+
+app.post('/sync-from-kimai/customers', async function (req, res) {
+  await syncFromKimai('customers');
+  res.status(204).send();
 });
 
-app.post("/sync-projects", async function (req, res) {
-  await syncEndpoint('projects');
-  res.send("projects synced");
+app.post('/sync-from-kimai/tasks', async function (req, res) {
+  await syncFromKimai('projects');
+  await syncFromKimai('activities');
+  res.status(204).send();
 });
 
-app.post("/sync-customers", async function (req, res) {
-  await syncEndpoint('customers');
-  res.send("customers synced");
-});
-
-// sub-projects
-app.post("/sync-activities", async function (req, res) {
-  await syncEndpoint('activities');
-  res.send("activities synced");
-});
-
-// sync all in order
-app.post("/sync-all", async function (req, res) {
-  await syncEndpoint('customers');
-  await syncEndpoint('projects');
-  await syncEndpoint('activities');
-  res.send("all synced");
-});
-
-async function syncEndpoint(type) {
-  const data = await getDataOfType(type);
-  await updateEntitiesProperties(type, data);
-  await updateEntityRelationships(type, data);
+async function syncFromKimai(type) {
+  const list = await fetchList(type);
+  console.log(`Fetched ${list.length} ${type}`);
+  for (const item of list) {
+    await upsertResource(type, item);
+  }
 }
