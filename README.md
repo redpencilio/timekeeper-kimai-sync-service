@@ -11,10 +11,8 @@ Add the following snippet to your `docker-compose.yml`
     image: redpencil/timekeeper-kimai-sync-service
     environment:
       API_TOKEN: "your_secret_kimai_api_token_here"
-      KIMAI_ENDPOINT: "https://kimai.redpencil.io/api" 
-    volumes:
-      - ./config/resources/domain.json:/config/domain.json
-      - ./config/kimai/mapping.json:/config/mapping.json
+      KIMAI_ENDPOINT: "https://kimai.redpencil.io/api"
+      DEFAULT_MU_AUTH_SCOPE: "http://services.redpencil.io/timekeeper-kimai-sync-service"
 ```
 
 ## Reference
@@ -25,7 +23,7 @@ The following environment variables must be configured:
 
 The following environment variables may be configured:
 - **RESOURCE_BASE_URI**: base URI for resource created by this service. Default: `http://timekeeper.redpencil.io`.
-- **WORKSPACE_URI**: URI of the workspace (concept-scheme) the synced projects/activities belong to
+- **WORKSPACE_URI**: URI of the workspace (concept-scheme) the synced projects/activities belong to. Default: `http://timekeeper.redpencil.io/workspaces/7530c9c9-4905-4fae-b63f-7a8d29232377`.
 
 ### API
 #### POST /sync-from-kimai/customers
