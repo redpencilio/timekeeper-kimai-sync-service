@@ -24,6 +24,7 @@ The following environment variables must be configured:
 The following environment variables may be configured:
 - **RESOURCE_BASE_URI**: base URI for resource created by this service. Default: `http://timekeeper.redpencil.io`.
 - **WORKSPACE_URI**: URI of the workspace (concept-scheme) the synced projects/activities belong to. Default: `http://timekeeper.redpencil.io/workspaces/7530c9c9-4905-4fae-b63f-7a8d29232377`.
+- **KIMAI_ACCOUNT_SERVICE_HOMEPAGE**: URL of the Kimai account service homepage. Default: `http://kimai.redpencil.io`.
 
 ### API
 #### POST /sync-from-kimai/customers

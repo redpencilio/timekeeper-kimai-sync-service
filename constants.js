@@ -16,3 +16,4 @@ if (KIMAI_ENDPOINT.startsWith("http://")) {
 
 export const RESOURCE_BASE_URI = process.env.RESOURCE_BASE_URI || 'http://timekeeper.redpencil.io';
 export const WORKSPACE_URI = process.env.WORKSPACE_URI || 'http://timekeeper.redpencil.io/workspaces/7530c9c9-4905-4fae-b63f-7a8d29232377';
+export const KIMAI_ACCOUNT_SERVICE_HOMEPAGE = process.env.KIMAI_ACCOUNT_SERVICE_HOMEPAGE || 'http://kimai.redpencil.io';

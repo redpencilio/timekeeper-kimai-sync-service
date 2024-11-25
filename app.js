@@ -19,6 +19,11 @@ app.post('/sync-from-kimai/tasks', async function (req, res) {
   res.status(204).send();
 });
 
+app.post('/sync-from-kimai/accounts', async function (req, res) {
+  await syncFromKimai('users');
+  res.status(204).send();
+});
+
 async function syncFromKimai(type) {
   const list = await fetchList(type);
   console.log(`Fetched ${list.length} ${type}`);

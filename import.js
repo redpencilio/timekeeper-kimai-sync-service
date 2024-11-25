@@ -1,5 +1,5 @@
 import { uuid, query, update, sparqlEscapeString, sparqlEscapeUri } from 'mu';
-import { RESOURCE_BASE_URI, WORKSPACE_URI } from './constants';
+import { RESOURCE_BASE_URI, WORKSPACE_URI, KIMAI_ACCOUNT_SERVICE_HOMEPAGE } from './constants';
 
 const SPARQL_PREFIXES = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -9,6 +9,7 @@ const SPARQL_PREFIXES = `
   PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
   PREFIX wf: <http://www.w3.org/2005/01/wf/flow#>
   PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 `
 
 export function upsertResource(type, kimaiResource) {
@@ -18,8 +19,29 @@ export function upsertResource(type, kimaiResource) {
     return upsertProject(kimaiResource);
   } else if (type == 'activities') {
     return upsertActivity(kimaiResource);
+  } else if (type == 'users') {
+    return upsertUser(kimaiResource);
   } else {
     throw new Error(`Unsupported resource type ${type}`);
+  }
+}
+
+async function upsertUser(kimaiUser) {
+  const account = await ensureKimaiResource('foaf:OnlineAccount', 'accounts', kimaiUser.id);
+
+  if (account.isNew) {
+    console.log(`Account with Kimai ID ${account.kimaiId} not found in triplestore. Going to create a new one.`);
+    await update(`
+      ${SPARQL_PREFIXES}
+      INSERT DATA {
+        ${sparqlEscapeUri(account.uri)} a foaf:OnlineAccount ;
+          mu:uuid ${sparqlEscapeString(account.uuid)} ;
+          foaf:accountName ${sparqlEscapeString(kimaiUser.username)} ;
+          foaf:accountServiceHomepage ${sparqlEscapeUri(KIMAI_ACCOUNT_SERVICE_HOMEPAGE)} .
+      }
+    `);
+  } else {
+    console.log(`Account with Kimai ID ${account.kimaiId} already exists.`);
   }
 }
 
