@@ -13,8 +13,6 @@
     "url": "git+https://github.com/redpencilio/timekeeper-kimai-sync-service.git"
   },
   "dependencies": {
-    "@lblod/mu-auth-sudo": "^0.6.1",
-    "cron": "^3.1.7",
-    "lodash.clonedeep": "^4.5.0"
+
   }
 }
