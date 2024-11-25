@@ -1,11 +1,24 @@
-add to docker-compose:
-```
+# Timekeeper Kimai sync service
+Microservice to sync data between Timekeeper and Kimai.
+
+## Getting started
+### Adding the service to your stack
+Generate an API key in Kimai for a system user.
+
+Add the following snippet to your `docker-compose.yml`
+```yml
   kimai-sync:
-    image: kimai-image
+    image: redpencil/timekeeper-kimai-sync-service
     environment:
-      API_TOKEN: abc // create one in kimai by pressing your name and choosing "api access"
-      KIMAI_ENDPOINT: "https://.kimai.endpoint.com/api" // make sure to use https endpoint and add /api
+      API_TOKEN: "your_secret_kimai_api_token_here"
+      KIMAI_ENDPOINT: "https://kimai.redpencil.io/api" 
     volumes:
-      - ./config/resources/domain.json:/config/domain.json // this service can work with any domain.json file, as long as it contains all information (including all used prefixes)
-      // - ./config/kimai/mapping.json:/config/mapping.json // an example exists in this repo, but this should be transfered to the app-repo instead
+      - ./config/resources/domain.json:/config/domain.json
+      - ./config/kimai/mapping.json:/config/mapping.json
 ```
+
+## Reference
+### Configuration
+The following environment variables must be configured:
+- **API_TOKEN**: secret API token for the Kimai API
+- **KIMAI_ENDPOINT**: URL of the Kimai API endpoint. Make sure to use `https` as protocol and end the URL with `/api`
