@@ -39,3 +39,9 @@ Relations to other resources (customer and/or task hierarchy) are only fetched o
 On update only the `name` and `color` attributes are updated.
 
 Returns status 204 No Content on success.
+
+#### POST /sync-from-kimai/accounts
+Sync user records from Kimai to Timekeeper.
+Only new users are created. Existing users don't get updated.
+
+Returns status 204 No Content on success.
