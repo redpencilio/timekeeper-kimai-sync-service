@@ -93,6 +93,19 @@ async function upsertActivity(kimaiActivity) {
       }
     `);
   }
+
+  // Inherit color from parent if not set in Kimai
+  await update(`
+    ${SPARQL_PREFIXES}
+    INSERT {
+      ${sparqlEscapeUri(activity.uri)} ui:color ?parentColor .
+    } WHERE {
+      ${sparqlEscapeUri(activity.uri)} a wf:Task .
+      FILTER NOT EXISTS { ${sparqlEscapeUri(activity.uri)} ui:color ?color . }
+      ${sparqlEscapeUri(activity.uri)} skos:broader ?parent .
+      ?parent ui:color ?parentColor .
+    }
+  `);
 }
 
 async function upsertProject(kimaiProject) {
@@ -144,6 +157,19 @@ async function upsertProject(kimaiProject) {
       }
     `);
   }
+
+  // Inherit color from customer if not set in Kimai
+  await update(`
+    ${SPARQL_PREFIXES}
+    INSERT {
+      ${sparqlEscapeUri(project.uri)} ui:color ?customerColor .
+    } WHERE {
+      ${sparqlEscapeUri(project.uri)} a wf:Task .
+      FILTER NOT EXISTS { ${sparqlEscapeUri(project.uri)} ui:color ?projectColor . }
+      ${sparqlEscapeUri(project.uri)} prov:wasAttributedTo ?customer .
+      ?customer ui:color ?customerColor .
+    }
+  `);
 }
 
 async function upsertCustomer(kimaiCustomer) {
