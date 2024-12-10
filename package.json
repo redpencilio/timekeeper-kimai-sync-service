@@ -4,7 +4,7 @@
   "description": "Microservice to sync data between Timekeeper and Kimai",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "release": "release-it --no-npm.publish"
   },
   "author": "redpencil <info@redpencil.io>",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "type": "git",
     "url": "git+https://github.com/redpencilio/timekeeper-kimai-sync-service.git"
   },
-  "dependencies": {
-
+  "devDependencies": {
+    "release-it": "^17.10.0"
   }
 }
