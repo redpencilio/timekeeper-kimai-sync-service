@@ -10,6 +10,8 @@ const SPARQL_PREFIXES = `
   PREFIX wf: <http://www.w3.org/2005/01/wf/flow#>
   PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
   PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+  PREFIX doap: <http://usefulinc.com/ns/doap#>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 `
 
 export function upsertResource(type, kimaiResource) {
@@ -46,14 +48,14 @@ async function upsertUser(kimaiUser) {
 }
 
 async function upsertActivity(kimaiActivity) {
-  const activity = await ensureKimaiResource('wf:Task', 'tasks', kimaiActivity.id)
+  const activity = await ensureKimaiResource('ext:KimaiActivity', 'tasks', kimaiActivity.id)
 
   if (activity.isNew) {
     console.log(`Activity with Kimai ID ${activity.kimaiId} not found in triplestore. Going to create a new one.`);
     await update(`
       ${SPARQL_PREFIXES}
       INSERT DATA {
-        ${sparqlEscapeUri(activity.uri)} a wf:Task ;
+        ${sparqlEscapeUri(activity.uri)} a wf:Task, ext:KimaiActivity ;
           mu:uuid ${sparqlEscapeString(activity.uuid)} ;
           rdfs:label ${sparqlEscapeString(kimaiActivity.name)} ;
           dct:identifier ${sparqlEscapeString(activity.kimaiId)} ;
@@ -109,14 +111,14 @@ async function upsertActivity(kimaiActivity) {
 }
 
 async function upsertProject(kimaiProject) {
-  const project = await ensureKimaiResource('wf:Task', 'tasks', kimaiProject.id)
+  const project = await ensureKimaiResource('doap:Project', 'tasks', kimaiProject.id)
 
   if (project.isNew) {
     console.log(`Project with Kimai ID ${project.kimaiId} not found in triplestore. Going to create a new one.`);
     await update(`
       ${SPARQL_PREFIXES}
       INSERT DATA {
-        ${sparqlEscapeUri(project.uri)} a wf:Task ;
+        ${sparqlEscapeUri(project.uri)} a wf:Task, doap:Project ;
           mu:uuid ${sparqlEscapeString(project.uuid)} ;
           rdfs:label ${sparqlEscapeString(kimaiProject.name)} ;
           dct:identifier ${sparqlEscapeString(project.kimaiId)} ;
