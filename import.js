@@ -38,6 +38,7 @@ async function upsertUser(kimaiUser) {
       INSERT DATA {
         ${sparqlEscapeUri(account.uri)} a foaf:OnlineAccount ;
           mu:uuid ${sparqlEscapeString(account.uuid)} ;
+          dct:identifier ${sparqlEscapeString(account.kimaiId)} ;
           foaf:accountName ${sparqlEscapeString(kimaiUser.username)} ;
           foaf:accountServiceHomepage ${sparqlEscapeUri(KIMAI_ACCOUNT_SERVICE_HOMEPAGE)} .
       }
