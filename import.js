@@ -1,18 +1,5 @@
 import { uuid, query, update, sparqlEscapeString, sparqlEscapeUri } from 'mu';
-import { RESOURCE_BASE_URI, WORKSPACE_URI, KIMAI_ACCOUNT_SERVICE_HOMEPAGE } from './constants';
-
-const SPARQL_PREFIXES = `
-  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-  PREFIX prov: <http://www.w3.org/ns/prov#>
-  PREFIX dct: <http://purl.org/dc/terms/>
-  PREFIX ui: <http://www.w3.org/ns/ui#>
-  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-  PREFIX wf: <http://www.w3.org/2005/01/wf/flow#>
-  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-  PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-  PREFIX doap: <http://usefulinc.com/ns/doap#>
-  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-`
+import { RESOURCE_BASE_URI, WORKSPACE_URI, KIMAI_ACCOUNT_SERVICE_HOMEPAGE, SPARQL_PREFIXES } from './constants';
 
 export function upsertResource(type, kimaiResource) {
   if (type == 'customers') {
