@@ -1,5 +1,8 @@
 import { URLSearchParams } from 'url';
-import { API_TOKEN, KIMAI_ENDPOINT } from './constants';
+import { add, startOfDay } from 'date-fns';
+import { parse as parseDuration } from 'tinyduration';
+import { API_TOKEN, KIMAI_ENDPOINT, TIMESHEET_STATUSES } from './constants';
+import { updateTimesheetStatus, updateWorkLogStatus } from './export';
 
 const authorizationHeader = `Bearer ${API_TOKEN}`;
 const headers = { Authorization: authorizationHeader, accept: 'application/json' };
@@ -33,4 +36,46 @@ export async function fetchList(type) {
   };
 
   return list;
+}
+
+export async function uploadTimesheet(workLogs, timesheetUri) {
+  console.log(`Found ${workLogs.length} work-logs for timesheet of ${workLogs[0]?.user.name}`);
+  for (const workLog of workLogs) {
+    console.log(`[${workLog.date}] ${workLog.duration} on Kimai activity ${workLog.task.kimaiId} of project ${workLog.task.parent.kimaiId} (URI: ${workLog.uri})`);
+    const exportedWorkLog = await postKimaiTimesheet(workLog);
+    await updateWorkLogStatus(exportedWorkLog);
+  }
+  updateTimesheetStatus(timesheetUri, TIMESHEET_STATUSES.EXPORTED);
+}
+
+async function postKimaiTimesheet(workLog) {
+  const begin = startOfDay(Date.parse(workLog.date)).toISOString();
+  const end = add(begin, parseDuration(workLog.duration)).toISOString();
+  const kimaiTimesheet = {
+    begin,
+    end,
+    project: parseInt(workLog.task.parent.kimaiId),
+    activity: parseInt(workLog.task.kimaiId),
+    user: parseInt(workLog.user.kimaiId)
+  };
+
+  const endpoint = new URL(`${KIMAI_ENDPOINT}/timesheets`);
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(kimaiTimesheet)
+  });
+
+  if (response.ok) {
+    const json =  await response.json();
+    const kimaiId = `${json.id}`;
+    return Object.assign({}, workLog, { kimaiId });
+  } else {
+    throw new Error(`Failed to upload work-log ${JSON.stringify(kimaiTimesheet)} to Kimai.
+ Response status: ${response.status}.
+ Response body: ${await response.text()}` );
+  }
 }

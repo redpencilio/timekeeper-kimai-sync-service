@@ -45,3 +45,12 @@ Sync user records from Kimai to Timekeeper.
 Only new users are created. Existing users don't get updated.
 
 Returns status 204 No Content on success.
+
+#### POST /sync-to-kimai/work-logs?month=9&year=2024
+Sync work logs for a given month/year from Timekeeper to Kimai. Month number is 1-based.
+
+Worklogs are only exported if the timesheet for the given month has been submitted by the user and the worklog has not been exported before.
+
+If all worklogs of a timesheet are successfully exported the status of the timesheet is updated to 'exported'. Failure of exporting one timesheet does not make the other fail.
+
+Returns status 204 No Content on success.

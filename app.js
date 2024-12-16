@@ -1,6 +1,8 @@
 import { app } from 'mu';
-import { fetchList } from './kimai';
+import { startOfMonth } from 'date-fns';
+import { fetchList, uploadTimesheet } from './kimai';
 import { upsertResource } from './import';
+import { collectWorkLogs } from './export';
 import { API_TOKEN, KIMAI_ENDPOINT } from './constants';
 
 console.log(`Kimai API connection config:
@@ -22,6 +24,29 @@ app.post('/sync-from-kimai/tasks', async function (req, res) {
 app.post('/sync-from-kimai/accounts', async function (req, res) {
   await syncFromKimai('users');
   res.status(204).send();
+});
+
+app.post('/sync-to-kimai/work-logs', async function (req, res) {
+  const month = parseInt(req.query['month']);
+  const year = parseInt(req.query['year']);
+  if (isNaN(month) || isNaN(year)) {
+    console.log('Month and year query params are required and must be integers');
+    res.status(400).send();
+  } else {
+    console.log(`Exporting work-logs for ${month}/${year}`);
+    const firstOfMonth = startOfMonth(new Date(year, month - 1));
+    const workLogsPerTimesheet = await collectWorkLogs(firstOfMonth);
+    for (const timesheet in workLogsPerTimesheet) {
+      try {
+        const workLogs = workLogsPerTimesheet[timesheet];
+        await uploadTimesheet(workLogs, timesheet);
+      } catch (e) {
+        const user = workLogsPerTimesheet[timesheet][0]?.user.name;
+        console.log(`Failed to upload all work-logs for timesheet ${month}/${year} of user ${user}`);
+      }
+    }
+    res.status(204).send();
+  }
 });
 
 async function syncFromKimai(type) {
