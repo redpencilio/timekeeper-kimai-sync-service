@@ -13,6 +13,19 @@
         "script": "from-kimai/run.sh",
         "join_networks": true
       }
+    },
+    {
+      "documentation": {
+        "command": "to-kimai",
+        "description": "Syncs customer projects and users from Kimai",
+        "arguments": ["month", "year"]
+      },
+      "environment": {
+        "image": "alpine/curl",
+        "interactive": false,
+        "script": "to-kimai/run.sh",
+        "join_networks": true
+      }
     }
   ]
 }
