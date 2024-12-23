@@ -1,0 +1,18 @@
+{
+  "version": "0.1",
+  "scripts": [
+    {
+      "documentation": {
+        "command": "from-kimai",
+        "description": "Syncs customer projects and users from Kimai",
+        "arguments": []
+      },
+      "environment": {
+        "image": "alpine/curl",
+        "interactive": false,
+        "script": "from-kimai/run.sh",
+        "join_networks": true
+      }
+    }
+  ]
+}
