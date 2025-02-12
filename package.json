@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "date-fns": "^4.1.0",
+    "p-queue": "^8.1.0",
     "tinyduration": "^3.3.1"
   }
 }

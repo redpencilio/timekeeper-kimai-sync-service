@@ -1,0 +1,164 @@
+import { query, update, sparqlEscapeUri, sparqlEscapeString } from 'mu';
+import PQueue from 'p-queue';
+import { deleteKimaiTimesheet, patchKimaiTimesheet, postKimaiTimesheet } from './kimai';
+import { SPARQL_PREFIXES, KIMAI_ACCOUNT_SERVICE_HOMEPAGE } from './constants';
+
+function isRelevantDeltaTriple(triple) {
+  if (triple.predicate.value == 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+    && triple.object.value == 'http://www.w3.org/2002/12/cal/ical#Vevent')
+    return true;
+  else if ([
+    'http://www.w3.org/2002/12/cal/ical#duration',
+    'http://www.w3.org/2002/12/cal/ical#dtstart',
+    'http://www.w3.org/ns/prov#wasAssociatedWith',
+    'http://purl.org/dc/terms/subject',
+  ].includes(triple.predicate.value))
+    return true;
+  else
+    return false;
+}
+
+export default class DeltaHandler {
+  constructor() {
+    this.workLogsInQueue = new Set();
+    this.queue = new PQueue({ concurrency: 1, autoStart: true });
+
+    this.queue.on('idle', () => {
+      console.log("Delta handling queue is idle. Waiting for new delta's...");
+    })
+  }
+
+  addToDeltaToQueue(changeSets) {
+    const newWorkLogsForQueue = [];
+    changeSets
+      .map((changeSet) => [...changeSet.inserts, ...changeSet.deletes])
+      .flat()
+      .filter(isRelevantDeltaTriple)
+      .forEach((triple) => {
+        const workLog = triple.subject.value;
+        if (!this.workLogsInQueue.has(workLog)) {
+          this.workLogsInQueue.add(workLog);
+          newWorkLogsForQueue.push(workLog);
+        }
+      });
+
+    if (newWorkLogsForQueue.length) {
+      console.log(`${newWorkLogsForQueue.length} new work logs are added to the delta handler queue`);
+      newWorkLogsForQueue.forEach((workLog) => {
+        this.queue.add(() => {
+          this.workLogsInQueue.delete(workLog);
+          return handle(workLog);
+        })
+      });
+    } else {
+      // No new work logs are added to the queue
+    }
+  }
+}
+
+async function handle(uri) {
+  try {
+    console.log(`Start handling work log <${uri}>`);
+
+    const result = await query(`
+      ${SPARQL_PREFIXES}
+      SELECT *
+      WHERE {
+        ${sparqlEscapeUri(uri)} a cal:Vevent ; ?p ?o .
+      } LIMIT 1`);
+
+    if (result.results.bindings.length) {
+      // Work log exists in triplestore.
+      const workLog = await fetchWorkLog(uri);
+      if (workLog.kimaiId) {
+        console.log(`Update timesheet ${workLog.kimaiId} for worklog <${uri}> in Kimai`);
+        await patchKimaiTimesheet(workLog);
+      } else {
+        console.log(`Create timesheet for worklog <${uri}> in Kimai`);
+        const uploadedWorkLog = await postKimaiTimesheet(workLog);
+        await insertKimaiId(uploadedWorkLog);
+      }
+    } else {
+      // Work log no longer exists in triplestore.
+      // We may need to remove it from Kimai and cleanup remaining triples.
+      const kimaiId = await fetchKimaiId(uri);
+      if (kimaiId) {
+        console.log(`Delete timesheet ${kimaiId} for worklog <${uri}> from Kimai`);
+        await deleteKimaiTimesheet({ uri, kimaiId });
+        await update(`
+          ${SPARQL_PREFIXES}
+          DELETE {
+            ${sparqlEscapeUri(uri)} dct:identifier ?kimaiId .
+          } WHERE {
+            ${sparqlEscapeUri(uri)} dct:identifier ?kimaiId .
+          }`);
+      }
+    }
+  } catch (e) {
+    console.log(`Something went wrong handling <${uri}>`);
+    console.log(e);
+  }
+}
+
+async function fetchKimaiId(uri) {
+  const result = await query(`
+    ${SPARQL_PREFIXES}
+    SELECT ?kimaiId
+    WHERE {
+      ${sparqlEscapeUri(uri)} dct:identifier ?kimaiId .
+    } LIMIT 1`);
+  return result.results.bindings[0]?.['kimaiId']?.value;
+}
+
+async function insertKimaiId(workLog) {
+  await update(`
+    ${SPARQL_PREFIXES}
+    INSERT DATA {
+      ${sparqlEscapeUri(workLog.uri)} dct:identifier ${sparqlEscapeString(workLog.kimaiId)} .
+    }
+  `);
+}
+
+async function fetchWorkLog(uri) {
+  const result = await query(`
+    ${SPARQL_PREFIXES}
+    SELECT DISTINCT ?duration ?date ?task ?user ?kimaiTimesheetId ?kimaiActivityId ?parentTask ?kimaiProjectId ?kimaiUserId
+    WHERE {
+      ${sparqlEscapeUri(uri)} a cal:Vevent ;
+        cal:duration ?duration ;
+        cal:dtstart ?date ;
+        dct:subject ?task ;
+        prov:wasAssociatedWith ?user .
+      OPTIONAL { ${sparqlEscapeUri(uri)} dct:identifier ?kimaiTimesheetId . }
+      ?task a ext:KimaiActivity ;
+        dct:identifier ?kimaiActivityId ;
+        skos:broader ?parentTask .
+      ?parentTask a doap:Project ;
+        dct:identifier ?kimaiProjectId .
+      ?user foaf:account ?kimaiAccount .
+      ?kimaiAccount a foaf:OnlineAccount ;
+        dct:identifier ?kimaiUserId ;
+        foaf:accountServiceHomepage ${sparqlEscapeUri(KIMAI_ACCOUNT_SERVICE_HOMEPAGE)} .
+    } LIMIT 1
+  `);
+
+  const binding = result.results.bindings[0];
+  return {
+    uri,
+    duration: binding['duration']?.value,
+    date: binding['date']?.value,
+    kimaiId: binding['kimaiTimesheetId']?.value,
+    task: {
+      uri: binding['task']?.value,
+      kimaiId: binding['kimaiActivityId']?.value,
+      parent: {
+        uri: binding['parentTask']?.value,
+        kimaiId: binding['kimaiProjectId']?.value
+      },
+    },
+    user: {
+      uri: binding['user']?.value,
+      kimaiId: binding['kimaiUserId']?.value
+    },
+  };
+}

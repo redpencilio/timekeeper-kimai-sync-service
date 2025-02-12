@@ -1,5 +1,7 @@
 import { app } from 'mu';
+import bodyParser from 'body-parser';
 import { startOfMonth } from 'date-fns';
+import DeltaHandler from './delta-handler';
 import { fetchList, uploadTimesheet } from './kimai';
 import { upsertResource } from './import';
 import { collectWorkLogs } from './export';
@@ -9,6 +11,12 @@ console.log(`Kimai API connection config:
 - Endpoint: ${KIMAI_ENDPOINT}
 - API Token: ${API_TOKEN}
 `);
+
+const deltaHandler = new DeltaHandler();
+
+app.post('/delta', bodyParser.json({ limit: '500mb' }), async function(req, res) {
+  deltaHandler.addToDeltaToQueue(req.body);
+});
 
 app.post('/sync-from-kimai/customers', async function (req, res) {
   await syncFromKimai('customers');

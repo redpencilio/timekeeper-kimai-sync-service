@@ -48,7 +48,7 @@ export async function uploadTimesheet(workLogs, timesheetUri) {
   updateTimesheetStatus(timesheetUri, TIMESHEET_STATUSES.EXPORTED);
 }
 
-async function postKimaiTimesheet(workLog) {
+export async function postKimaiTimesheet(workLog) {
   const begin = startOfDay(Date.parse(workLog.date)).toISOString();
   const end = add(begin, parseDuration(workLog.duration)).toISOString();
   const kimaiTimesheet = {
@@ -75,6 +75,55 @@ async function postKimaiTimesheet(workLog) {
     return Object.assign({}, workLog, { kimaiId });
   } else {
     throw new Error(`Failed to upload work-log ${JSON.stringify(kimaiTimesheet)} to Kimai.
+ Response status: ${response.status}.
+ Response body: ${await response.text()}` );
+  }
+}
+
+export async function patchKimaiTimesheet(workLog) {
+  const begin = startOfDay(Date.parse(workLog.date)).toISOString();
+  const end = add(begin, parseDuration(workLog.duration)).toISOString();
+  const kimaiTimesheet = {
+    begin,
+    end,
+    project: parseInt(workLog.task.parent.kimaiId),
+    activity: parseInt(workLog.task.kimaiId),
+    user: parseInt(workLog.user.kimaiId)
+  };
+
+  const endpoint = new URL(`${KIMAI_ENDPOINT}/timesheets/${workLog.kimaiId}`);
+  const response = await fetch(endpoint, {
+    method: 'PATCH',
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(kimaiTimesheet)
+  });
+
+  if (response.ok) {
+    return workLog;
+  } else {
+    throw new Error(`Failed to update work-log ${JSON.stringify(kimaiTimesheet)} in Kimai.
+ Response status: ${response.status}.
+ Response body: ${await response.text()}` );
+  }
+}
+
+export async function deleteKimaiTimesheet(workLog) {
+  const endpoint = new URL(`${KIMAI_ENDPOINT}/timesheets/${workLog.kimaiId}`);
+  const response = await fetch(endpoint, {
+    method: 'DELETE',
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    }
+  });
+
+  if (response.ok) {
+    return true;
+  } else {
+    throw new Error(`Failed to remove work-log <${workLog.uri}> with ID ${workLog.kimaiId} from Kimai.
  Response status: ${response.status}.
  Response body: ${await response.text()}` );
   }
