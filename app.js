@@ -2,9 +2,9 @@ import { app } from 'mu';
 import bodyParser from 'body-parser';
 import { startOfMonth } from 'date-fns';
 import DeltaHandler from './delta-handler';
-import { fetchList, uploadTimesheet } from './kimai';
+import { fetchList } from './kimai';
 import { upsertResource } from './import';
-import { collectWorkLogs } from './export';
+import { uploadTimesheets } from './export';
 import { API_TOKEN, KIMAI_ENDPOINT } from './constants';
 
 console.log(`Kimai API connection config:
@@ -43,16 +43,7 @@ app.post('/sync-to-kimai/work-logs', async function (req, res) {
   } else {
     console.log(`Exporting work-logs for ${month}/${year}`);
     const firstOfMonth = startOfMonth(new Date(year, month - 1));
-    const workLogsPerTimesheet = await collectWorkLogs(firstOfMonth);
-    for (const timesheet in workLogsPerTimesheet) {
-      try {
-        const workLogs = workLogsPerTimesheet[timesheet];
-        await uploadTimesheet(workLogs, timesheet);
-      } catch (e) {
-        const user = workLogsPerTimesheet[timesheet][0]?.user.name;
-        console.log(`Failed to upload all work-logs for timesheet ${month}/${year} of user ${user}`);
-      }
-    }
+    await uploadTimesheets(firstOfMonth);
     res.status(204).send();
   }
 });

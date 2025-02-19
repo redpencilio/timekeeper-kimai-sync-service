@@ -1,8 +1,38 @@
 import { query, update, sparqlEscapeDate, sparqlEscapeUri, sparqlEscapeString } from 'mu';
 import { SPARQL_PREFIXES, TIMESHEET_STATUSES, KIMAI_ACCOUNT_SERVICE_HOMEPAGE } from './constants';
 import { addMonths, startOfMonth } from 'date-fns';
+import { postKimaiTimesheet, patchKimaiTimesheet } from './kimai';
 
-export async function collectWorkLogs(startDate) {
+export async function uploadTimesheets(startDate) {
+  const workLogsPerTimesheet = await collectWorkLogs(startDate);
+  for (const [timesheet, workLogs] of Object.entries(workLogsPerTimesheet)) {
+    try {
+      await uploadWorkLogs(workLogs, timesheet);
+    } catch (e) {
+      const user = workLogsPerTimesheet[timesheet][0]?.user.name;
+      console.log(`Failed to upload all work-logs for timesheet ${month}/${year} of user ${user}`);
+    }
+  }
+}
+
+async function uploadWorkLogs(workLogs, timesheetUri) {
+  console.log(`Found ${workLogs.length} work-logs for timesheet of ${workLogs[0]?.user.name}`);
+  for (const workLog of workLogs) {
+    const logMessage = `[${workLog.date}] ${workLog.duration} on Kimai activity ${workLog.task.kimaiId} of project ${workLog.task.parent.kimaiId} (URI: ${workLog.uri})`;
+    let exportedWorkLog;
+    if (workLog.kimaiId) {
+      console.log(`UPDATE ${logMessage}`);
+      exportedWorkLog = await patchKimaiTimesheet(workLog);
+    } else {
+      console.log(`CREATE ${logMessage}`);
+      exportedWorkLog = await postKimaiTimesheet(workLog);
+    }
+    await updateWorkLogStatus(exportedWorkLog);
+  }
+  updateTimesheetStatus(timesheetUri, TIMESHEET_STATUSES.EXPORTED);
+}
+
+async function collectWorkLogs(startDate) {
   const result = await query(`
     ${SPARQL_PREFIXES}
 
@@ -57,15 +87,15 @@ export async function collectWorkLogs(startDate) {
       const workLogs = [];
       const result = await query(`
         ${SPARQL_PREFIXES}
-        SELECT DISTINCT ?workLog ?duration ?date ?task ?kimaiActivityId ?parentTask ?kimaiProjectId ?kimaiUserId
+        SELECT DISTINCT ?workLog ?duration ?date ?task ?kimaiTimesheetId ?kimaiActivityId ?parentTask ?kimaiProjectId ?kimaiUserId
         WHERE {
           ?workLog a cal:Vevent ;
             cal:duration ?duration ;
             cal:dtstart ?date ;
             dct:subject ?task ;
             prov:wasAssociatedWith ${sparqlEscapeUri(timesheet.user.uri)} .
-          FILTER NOT EXISTS { ?workLog dct:identifier ?kimaiId . }
           FILTER (?date >= ${sparqlEscapeDate(startDate)} && ?date < ${sparqlEscapeDate(startNextMonth)})
+          OPTIONAL { ?workLog dct:identifier ?kimaiTimesheetId . }
           ?task a ext:KimaiActivity ;
             dct:identifier ?kimaiActivityId ;
             skos:broader ?parentTask .
@@ -83,6 +113,7 @@ export async function collectWorkLogs(startDate) {
           uri: binding['workLog']?.value,
           duration: binding['duration']?.value,
           date: binding['date']?.value,
+          kimaiId: binding['kimaiTimesheetId']?.value,
           task: {
             uri: binding['task']?.value,
             kimaiId: binding['kimaiActivityId']?.value,
@@ -112,6 +143,18 @@ export async function collectWorkLogs(startDate) {
 export async function updateWorkLogStatus(workLog) {
   await update(`
     ${SPARQL_PREFIXES}
+    DELETE WHERE {
+      ${sparqlEscapeUri(workLog.uri)} dct:identifier ?kimaiId .
+    }
+
+    ;
+
+    DELETE WHERE {
+      ?timesheet skos:member ${sparqlEscapeUri(workLog.uri)} .
+    }
+
+    ;
+
     INSERT DATA {
       ${sparqlEscapeUri(workLog.uri)} dct:identifier ${sparqlEscapeString(workLog.kimaiId)} .
       ${sparqlEscapeUri(workLog.timesheet.uri)} skos:member ${sparqlEscapeUri(workLog.uri)} .

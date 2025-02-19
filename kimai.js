@@ -38,16 +38,6 @@ export async function fetchList(type) {
   return list;
 }
 
-export async function uploadTimesheet(workLogs, timesheetUri) {
-  console.log(`Found ${workLogs.length} work-logs for timesheet of ${workLogs[0]?.user.name}`);
-  for (const workLog of workLogs) {
-    console.log(`[${workLog.date}] ${workLog.duration} on Kimai activity ${workLog.task.kimaiId} of project ${workLog.task.parent.kimaiId} (URI: ${workLog.uri})`);
-    const exportedWorkLog = await postKimaiTimesheet(workLog);
-    await updateWorkLogStatus(exportedWorkLog);
-  }
-  updateTimesheetStatus(timesheetUri, TIMESHEET_STATUSES.EXPORTED);
-}
-
 export async function postKimaiTimesheet(workLog) {
   const begin = startOfDay(Date.parse(workLog.date)).toISOString();
   const end = add(begin, parseDuration(workLog.duration)).toISOString();
