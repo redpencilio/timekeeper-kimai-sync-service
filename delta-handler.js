@@ -43,7 +43,7 @@ export default class DeltaHandler {
       });
 
     if (newWorkLogsForQueue.length) {
-      console.log(`${newWorkLogsForQueue.length} new work logs are added to the delta handler queue`);
+      console.log(`${newWorkLogsForQueue.length} new items are added to the delta handler queue`);
       newWorkLogsForQueue.forEach((workLog) => {
         this.queue.add(() => {
           this.workLogsInQueue.delete(workLog);
@@ -58,7 +58,7 @@ export default class DeltaHandler {
 
 async function handle(uri) {
   try {
-    console.log(`Start handling work log <${uri}>`);
+    console.log(`Start handling item <${uri}>`);
 
     const result = await query(`
       ${SPARQL_PREFIXES}
@@ -70,11 +70,12 @@ async function handle(uri) {
     if (result.results.bindings.length) {
       // Work log exists in triplestore.
       const workLog = await fetchWorkLog(uri);
+      const logMessage = `[${workLog.date}] ${workLog.duration} on Kimai activity ${workLog.task.kimaiId} of project ${workLog.task.parent.kimaiId} (URI: ${workLog.uri})`;
       if (workLog.kimaiId) {
-        console.log(`Update timesheet ${workLog.kimaiId} for worklog <${uri}> in Kimai`);
+        console.log(`UPDATE ${logMessage}`);
         await patchKimaiTimesheet(workLog);
       } else {
-        console.log(`Create timesheet for worklog <${uri}> in Kimai`);
+        console.log(`CREATE ${logMessage}`);
         const uploadedWorkLog = await postKimaiTimesheet(workLog);
         await insertKimaiId(uploadedWorkLog);
       }
@@ -83,7 +84,7 @@ async function handle(uri) {
       // We may need to remove it from Kimai and cleanup remaining triples.
       const kimaiId = await fetchKimaiId(uri);
       if (kimaiId) {
-        console.log(`Delete timesheet ${kimaiId} for worklog <${uri}> from Kimai`);
+        console.log(`DELETE timesheet ${kimaiId} for worklog <${uri}> from Kimai`);
         await deleteKimaiTimesheet({ uri, kimaiId });
         await update(`
           ${SPARQL_PREFIXES}
@@ -92,6 +93,8 @@ async function handle(uri) {
           } WHERE {
             ${sparqlEscapeUri(uri)} dct:identifier ?kimaiId .
           }`);
+      } else {
+        console.log(`No Kimai sync required for <${uri}>. This is probably not a work log.`);
       }
     }
   } catch (e) {
