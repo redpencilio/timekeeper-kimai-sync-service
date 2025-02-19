@@ -15,7 +15,7 @@ console.log(`Kimai API connection config:
 const deltaHandler = new DeltaHandler();
 
 app.post('/delta', bodyParser.json({ limit: '500mb' }), async function(req, res) {
-  deltaHandler.addToDeltaToQueue(req.body);
+  deltaHandler.addDeltaToQueue(req.body);
 });
 
 app.post('/sync-from-kimai/customers', async function (req, res) {

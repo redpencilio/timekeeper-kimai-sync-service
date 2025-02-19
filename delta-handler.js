@@ -28,7 +28,7 @@ export default class DeltaHandler {
     })
   }
 
-  addToDeltaToQueue(changeSets) {
+  addDeltaToQueue(changeSets) {
     const newWorkLogsForQueue = [];
     changeSets
       .map((changeSet) => [...changeSet.inserts, ...changeSet.deletes])
