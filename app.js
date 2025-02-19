@@ -1,7 +1,7 @@
 import { app } from 'mu';
 import bodyParser from 'body-parser';
 import { startOfMonth } from 'date-fns';
-import DeltaHandler from './delta-handler';
+import UpdateHandler, { fetchWorkLogById } from './update-handler';
 import { fetchList } from './kimai';
 import { upsertResource } from './import';
 import { uploadTimesheets } from './export';
@@ -12,10 +12,23 @@ console.log(`Kimai API connection config:
 - API Token: ${API_TOKEN}
 `);
 
-const deltaHandler = new DeltaHandler();
+const updateHandler = new UpdateHandler();
 
 app.post('/delta', bodyParser.json({ limit: '500mb' }), async function(req, res) {
-  deltaHandler.addDeltaToQueue(req.body);
+  updateHandler.addDeltaToQueue(req.body);
+  res.status(204).send();
+});
+
+app.post('/update-queue/work-logs/:workLogId', async function (req, res) {
+  const workLogId = req.params['workLogId'];
+  const workLogUri = await fetchWorkLogById(workLogId);
+  if (workLogUri) {
+    updateHandler.addWorkLogToQueue(workLogUri);
+    res.status(204).send();
+  } else {
+    console.log(`Id '${workLogId}' is not a valid work log id`);
+    res.status(400).send();
+  }
 });
 
 app.post('/sync-from-kimai/customers', async function (req, res) {

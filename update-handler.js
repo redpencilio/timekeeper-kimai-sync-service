@@ -18,9 +18,20 @@ function isRelevantDeltaTriple(triple) {
     return false;
 }
 
-export default class DeltaHandler {
+export async function fetchWorkLogById(workLogId) {
+  const result = await query(`
+    ${SPARQL_PREFIXES}
+    SELECT ?uri
+    WHERE {
+      ?uri a cal:Vevent ; mu:uuid ${sparqlEscapeString(workLogId)} .
+    } LIMIT 1`);
+
+  return result.results.bindings[0]?.['uri'].value
+}
+
+export default class UpdateHandler {
   constructor() {
-    this.workLogsInQueue = new Set();
+    this.workLogsInQueue = new Set(); // a unique set of URIs that is currently scheduled in this.queue
     this.queue = new PQueue({ concurrency: 1, autoStart: true });
 
     this.queue.on('idle', () => {
@@ -28,7 +39,26 @@ export default class DeltaHandler {
     })
   }
 
+  updateTask(workLogUri) {
+    return () => {
+      this.workLogsInQueue.delete(workLogUri);
+      return handle(workLogUri);
+    };
+  }
+
+  addWorkLogToQueue(workLog) {
+    if (this.workLogsInQueue.has(workLog)) {
+      console.log(`Work log <${workLog}> is already scheduled in the queue`);
+    } else {
+      console.log(`Work log <${workLog}> is added to the delta handler queue`);
+      this.workLogsInQueue.add(workLog);
+      this.queue.add(this.updateTask(workLog));
+    }
+  }
+
   addDeltaToQueue(changeSets) {
+    // Retrieve a unique set of relevant URIs that are not scheduled yet
+    // from the delta message
     const newWorkLogsForQueue = [];
     changeSets
       .map((changeSet) => [...changeSet.inserts, ...changeSet.deletes])
@@ -43,15 +73,13 @@ export default class DeltaHandler {
       });
 
     if (newWorkLogsForQueue.length) {
-      console.log(`${newWorkLogsForQueue.length} new items are added to the delta handler queue`);
+      // Add an update task for each relevant URI to the queue
+      console.log(`${newWorkLogsForQueue.length} new items from delta message are added to the delta handler queue`);
       newWorkLogsForQueue.forEach((workLog) => {
-        this.queue.add(() => {
-          this.workLogsInQueue.delete(workLog);
-          return handle(workLog);
-        })
+         this.queue.add(this.updateTask(workLog));
       });
     } else {
-      // No new work logs are added to the queue
+      // No relevant URIs to add to the queue
     }
   }
 }
