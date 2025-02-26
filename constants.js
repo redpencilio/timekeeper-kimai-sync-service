@@ -18,6 +18,8 @@ export const RESOURCE_BASE_URI = process.env.RESOURCE_BASE_URI || 'http://timeke
 export const WORKSPACE_URI = process.env.WORKSPACE_URI || 'http://timekeeper.redpencil.io/workspaces/7530c9c9-4905-4fae-b63f-7a8d29232377';
 export const KIMAI_ACCOUNT_SERVICE_HOMEPAGE = process.env.KIMAI_ACCOUNT_SERVICE_HOMEPAGE || 'http://kimai.redpencil.io';
 
+export const FALLBACK_SYNC_CRON = process.env.FALLBACK_SYNC_CRON || '0 0 */2 * * *'; // every 2h by default
+
 export const SPARQL_PREFIXES = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
