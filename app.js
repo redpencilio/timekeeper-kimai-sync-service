@@ -5,9 +5,8 @@ import { CronJob } from 'cron';
 import UpdateHandler, { fetchWorkLogById, fetchWorkLogByKimaiId } from './update-handler';
 import { deleteKimaiTimesheet, fetchList } from './kimai';
 import { upsertResource } from './import';
-import { uploadTimesheets } from './export';
+import { lockTimesheets, synchronizeWorkLogs } from './export';
 import { API_TOKEN, FALLBACK_SYNC_CRON, KIMAI_ENDPOINT } from './constants';
-import synchronize from './synchronize';
 
 console.log(`Kimai API connection config:
 - Endpoint: ${KIMAI_ENDPOINT}
@@ -78,25 +77,25 @@ app.post('/sync-to-kimai/work-logs', async function (req, res) {
   const start = parseISO(req.body.start);
   const end = parseISO(req.body.end);
   if (!isValid(start) || !isValid(end)) {
-    console.log(`Start and end query params are required and must be formatted like yyyy-MM-dd. Received ${req.body.start} and ${req.body.end}.`);
+    console.log(`Start and end params are required in the body and must be formatted like yyyy-MM-dd. Received ${req.body.start} and ${req.body.end}.`);
     res.status(400).send();
   } else {
     console.log(`Exporting work-logs in period [${req.body.start}, ${req.body.end}]`);
-    synchronize(start, end); // don't await async action
+    synchronizeWorkLogs(start, end); // don't await async action
     res.status(202).send();
   }
 });
 
 app.post('/timesheets/lock', async function (req, res) {
-  const month = parseInt(req.query['month']);
-  const year = parseInt(req.query['year']);
+  const month = parseInt(req.body.month);
+  const year = parseInt(req.body.year);
   if (isNaN(month) || isNaN(year)) {
-    console.log('Month and year query params are required and must be integers');
+    console.log('Month and year params are required in the body and must be integers');
     res.status(400).send();
   } else {
-    console.log(`Exporting work-logs for ${month}/${year}`);
+    console.log(`Locking submitted timesheets for ${month}/${year}`);
     const firstOfMonth = startOfMonth(new Date(year, month - 1));
-    await uploadTimesheets(firstOfMonth);
+    await lockTimesheets(firstOfMonth);
     res.status(204).send();
   }
 });

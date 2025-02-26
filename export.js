@@ -1,35 +1,75 @@
-import { query, update, sparqlEscapeDate, sparqlEscapeUri, sparqlEscapeString } from 'mu';
+import { query, update, sparqlEscapeDate, sparqlEscapeUri } from 'mu';
 import { SPARQL_PREFIXES, TIMESHEET_STATUSES, KIMAI_ACCOUNT_SERVICE_HOMEPAGE } from './constants';
-import { addMonths, startOfMonth } from 'date-fns';
-import { postKimaiTimesheet, patchKimaiTimesheet } from './kimai';
+import { addMonths, format, formatISO, startOfMonth } from 'date-fns';
+import { fetchList } from './kimai';
 
-export async function uploadTimesheets(startDate) {
+function formatPeriod(start, end) {
+  const startStr = formatISO(start, { representation: 'date' });
+  const endStr = formatISO(end, { representation: 'date' });
+  return `[${startStr}, ${endStr}]`;
+}
+
+export async function synchronizeWorkLogs(start, end) {
+  console.log(`Synchronizing work logs to Kimai for period ${formatPeriod(start, end)}`);
+  await synchronizeWorkLogsToKimai(start, end);
+
+  console.log(`Cleanup timesheets in Kimai for period ${formatPeriod(start, end)}`);
+  await synchronizeWorkLogsFromKimai(start, end);
+}
+
+async function synchronizeWorkLogsToKimai(start, end) {
+  const result = await query(`
+    ${SPARQL_PREFIXES}
+    SELECT ?uri ?id
+    WHERE {
+    ?uri a cal:Vevent ;
+    mu:uuid ?id ;
+    cal:dtstart ?date .
+    FILTER NOT EXISTS { ?uri dct:identifier ?kimaiId . }
+    FILTER (?date >= ${sparqlEscapeDate(start)} && ?date <= ${sparqlEscapeDate(end)})
+    }`);
+
+  const workLogIds = result.results.bindings.map((binding) => binding['id'].value);
+  console.log(`Going to push ${workLogIds.length} work logs on the update queue to be synced to Kimai`);
+  for (const workLogId of workLogIds) {
+    await fetch(`http://localhost/update-queue/work-logs/${workLogId}`, {
+      method: 'POST',
+      headers: { Accept: 'application/vnd.api+json' },
+    })
+  }
+}
+
+async function synchronizeWorkLogsFromKimai(start, end) {
+  const kimaiTimesheets = await fetchList('timesheets', {
+    user: 'all',
+    begin: format(start, "yyyy-MM-dd'T'HH:mm:ss"),
+    end: format(end, "yyyy-MM-dd'T'HH:mm:ss")
+  })
+
+  const kimaiTimesheetIds = kimaiTimesheets.map((timesheet) => `${timesheet.id}`);
+  console.log(`Going to validate the existance of ${kimaiTimesheetIds.length} Kimai timesheets in the triplestore`);
+  for (const kimaiTimesheetId of kimaiTimesheetIds) {
+    await fetch(`http://localhost/kimai-timesheets/${kimaiTimesheetId}`, {
+      method: 'PUT',
+      headers: { Accept: 'application/vnd.api+json' }
+    });
+  }
+}
+
+export async function lockTimesheets(startDate) {
   const workLogsPerTimesheet = await collectWorkLogs(startDate);
   for (const [timesheet, workLogs] of Object.entries(workLogsPerTimesheet)) {
     try {
-      await uploadWorkLogs(workLogs, timesheet);
+      console.log(`Found ${workLogs.length} work-logs for timesheet of ${workLogs[0]?.user.name}`);
+      for (const workLog of workLogs) {
+        await linkWorkLogToTimesheet(workLog);
+      }
+      updateTimesheetStatus(timesheet, TIMESHEET_STATUSES.EXPORTED);
     } catch (e) {
       const user = workLogsPerTimesheet[timesheet][0]?.user.name;
       console.log(`Failed to upload all work-logs for timesheet ${month}/${year} of user ${user}`);
     }
   }
-}
-
-async function uploadWorkLogs(workLogs, timesheetUri) {
-  console.log(`Found ${workLogs.length} work-logs for timesheet of ${workLogs[0]?.user.name}`);
-  for (const workLog of workLogs) {
-    const logMessage = `[${workLog.date}] ${workLog.duration} on Kimai activity ${workLog.task.kimaiId} of project ${workLog.task.parent.kimaiId} (URI: ${workLog.uri})`;
-    let exportedWorkLog;
-    if (workLog.kimaiId) {
-      console.log(`UPDATE ${logMessage}`);
-      exportedWorkLog = await patchKimaiTimesheet(workLog);
-    } else {
-      console.log(`CREATE ${logMessage}`);
-      exportedWorkLog = await postKimaiTimesheet(workLog);
-    }
-    await updateWorkLogStatus(exportedWorkLog);
-  }
-  updateTimesheetStatus(timesheetUri, TIMESHEET_STATUSES.EXPORTED);
 }
 
 async function collectWorkLogs(startDate) {
@@ -140,15 +180,9 @@ async function collectWorkLogs(startDate) {
   }
 }
 
-export async function updateWorkLogStatus(workLog) {
+async function linkWorkLogToTimesheet(workLog) {
   await update(`
     ${SPARQL_PREFIXES}
-    DELETE WHERE {
-      ${sparqlEscapeUri(workLog.uri)} dct:identifier ?kimaiId .
-    }
-
-    ;
-
     DELETE WHERE {
       ?timesheet skos:member ${sparqlEscapeUri(workLog.uri)} .
     }
@@ -156,13 +190,12 @@ export async function updateWorkLogStatus(workLog) {
     ;
 
     INSERT DATA {
-      ${sparqlEscapeUri(workLog.uri)} dct:identifier ${sparqlEscapeString(workLog.kimaiId)} .
       ${sparqlEscapeUri(workLog.timesheet.uri)} skos:member ${sparqlEscapeUri(workLog.uri)} .
     }
   `);
 }
 
-export async function updateTimesheetStatus(timesheet, status) {
+async function updateTimesheetStatus(timesheet, status) {
   await update(`
     ${SPARQL_PREFIXES}
     DELETE WHERE {

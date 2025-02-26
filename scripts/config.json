@@ -17,13 +17,26 @@
     {
       "documentation": {
         "command": "to-kimai",
-        "description": "Syncs customer projects and users from Kimai",
-        "arguments": ["month", "year"]
+        "description": "Syncs work-logs to Kimai for a given time period. Start and end must be passed using yyyy-MM-dd format.",
+        "arguments": ["start", "end"]
       },
       "environment": {
         "image": "alpine/curl",
         "interactive": false,
         "script": "to-kimai/run.sh",
+        "join_networks": true
+      }
+    },
+    {
+      "documentation": {
+        "command": "lock-timesheets",
+        "description": "Set timesheet status to exported and links related work logs",
+        "arguments": ["month", "year"]
+      },
+      "environment": {
+        "image": "alpine/curl",
+        "interactive": false,
+        "script": "lock-timesheets/run.sh",
         "join_networks": true
       }
     }
