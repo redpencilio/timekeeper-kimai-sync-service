@@ -18,28 +18,6 @@ function isRelevantDeltaTriple(triple) {
     return false;
 }
 
-export async function fetchWorkLogById(workLogId) {
-  const result = await query(`
-    ${SPARQL_PREFIXES}
-    SELECT ?uri
-    WHERE {
-      ?uri a cal:Vevent ; mu:uuid ${sparqlEscapeString(workLogId)} .
-    } LIMIT 1`);
-
-  return result.results.bindings[0]?.['uri'].value
-}
-
-export async function fetchWorkLogByKimaiId(kimaiId) {
-  const result = await query(`
-    ${SPARQL_PREFIXES}
-    SELECT ?uri
-    WHERE {
-      ?uri a cal:Vevent ; dct:identifier ${sparqlEscapeString(kimaiId)} .
-    } LIMIT 1`);
-
-  return result.results.bindings[0]?.['uri'].value
-}
-
 export default class UpdateHandler {
   constructor() {
     this.workLogsInQueue = new Set(); // a unique set of URIs that is currently scheduled in this.queue
@@ -203,4 +181,26 @@ async function fetchWorkLog(uri) {
       kimaiId: binding['kimaiUserId']?.value
     },
   };
+}
+
+export async function fetchWorkLogById(workLogId) {
+  const result = await query(`
+    ${SPARQL_PREFIXES}
+    SELECT ?uri
+    WHERE {
+      ?uri a cal:Vevent ; mu:uuid ${sparqlEscapeString(workLogId)} .
+    } LIMIT 1`);
+
+  return result.results.bindings[0]?.['uri'].value
+}
+
+export async function fetchWorkLogByKimaiId(kimaiId) {
+  const result = await query(`
+    ${SPARQL_PREFIXES}
+    SELECT ?uri
+    WHERE {
+      ?uri a cal:Vevent ; dct:identifier ${sparqlEscapeString(kimaiId)} .
+    } LIMIT 1`);
+
+  return result.results.bindings[0]?.['uri'].value
 }
