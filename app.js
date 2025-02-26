@@ -1,8 +1,8 @@
 import { app } from 'mu';
 import bodyParser from 'body-parser';
 import { startOfMonth } from 'date-fns';
-import UpdateHandler, { fetchWorkLogById } from './update-handler';
-import { fetchList } from './kimai';
+import UpdateHandler, { fetchWorkLogById, fetchWorkLogByKimaiId } from './update-handler';
+import { deleteKimaiTimesheet, fetchList } from './kimai';
 import { upsertResource } from './import';
 import { uploadTimesheets } from './export';
 import { API_TOKEN, KIMAI_ENDPOINT } from './constants';
@@ -24,10 +24,21 @@ app.post('/update-queue/work-logs/:workLogId', async function (req, res) {
   const workLogUri = await fetchWorkLogById(workLogId);
   if (workLogUri) {
     updateHandler.addWorkLogToQueue(workLogUri);
-    res.status(204).send();
+    res.status(202).send();
   } else {
     console.log(`Id '${workLogId}' is not a valid work log id`);
     res.status(400).send();
+  }
+});
+
+app.put('/kimai-timesheets/:kimaiId', async function (req, res) {
+  const kimaiId = req.params['kimaiId'];
+  const workLogUri = await fetchWorkLogByKimaiId(kimaiId);
+  if (!workLogUri) {
+    await deleteKimaiTimesheet({ kimaiId });
+    res.status(204).send();
+  } else {
+    res.status(204).send();
   }
 });
 
