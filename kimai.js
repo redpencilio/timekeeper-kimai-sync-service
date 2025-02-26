@@ -1,13 +1,12 @@
 import { URLSearchParams } from 'url';
 import { add, startOfDay } from 'date-fns';
 import { parse as parseDuration } from 'tinyduration';
-import { API_TOKEN, KIMAI_ENDPOINT, TIMESHEET_STATUSES } from './constants';
-import { updateTimesheetStatus, updateWorkLogStatus } from './export';
+import { API_TOKEN, KIMAI_ENDPOINT } from './constants';
 
 const authorizationHeader = `Bearer ${API_TOKEN}`;
 const headers = { Authorization: authorizationHeader, accept: 'application/json' };
 
-async function fetchPage(type, page = 0, size = 50, filters = {}) {
+async function fetchPage(type, page = 1, size = 50, filters = {}) {
   const endpoint = new URL(`${KIMAI_ENDPOINT}/${type}`);
   endpoint.search = new URLSearchParams(Object.assign({ page, size }, filters));
   console.log(`Fetch page ${endpoint.href}`);
@@ -22,14 +21,14 @@ async function fetchPage(type, page = 0, size = 50, filters = {}) {
   }
 }
 
-export async function fetchList(type) {
-  const size = 999; // TODO decrease once pagination is supported by Kimai API
-  let pageNumber = 0;
+export async function fetchList(type, filters = {}) {
+  const size = 100;
+  let pageNumber = 1;
   let isLastPage = false;
   let list = [];
 
   while (!isLastPage) {
-    const page = await fetchPage(type, pageNumber, size);
+    const page = await fetchPage(type, pageNumber, size, filters);
     isLastPage = page.length < size;
     list = [...list, ...page];
     pageNumber++;
