@@ -6,6 +6,11 @@ steps:
       tags: "feature-${CI_COMMIT_BRANCH##feature/}"
       mirror: "https://docker-registry-mirror.redpencil.io"
       logins:
+        - registry: "https://oci.redpencil.io/"
+          username:
+            from_secret: oci_username
+          password:
+            from_secret: oci_password
         - registry: "https://index.docker.io/v1/"
           username:
             from_secret: docker_username
