@@ -2,14 +2,15 @@ steps:
   build-and-push:
     image: woodpeckerci/plugin-docker-buildx:6.0.1
     settings:
-      mirror: "https://docker-registry-mirror.redpencil.io"
-      registry: "oci.redpencil.io"
-      repo: "oci.redpencil.io/${CI_REPO_OWNER%%io}/${CI_REPO_NAME}"
+      repo: ["${CI_REPO_OWNER%%io}/${CI_REPO_NAME}", "oci.redpencil.io/${CI_REPO_OWNER%%io}/${CI_REPO_NAME}"]
       tags: "feature-${CI_COMMIT_BRANCH##feature/}"
-      username:
-        from_secret: docker_username
-      password:
-        from_secret: docker_password
+      mirror: "https://docker-registry-mirror.redpencil.io"
+      logins:
+        - registry: "https://index.docker.io/v1/"
+          username:
+            from_secret: docker_username
+          password:
+            from_secret: docker_password
 when:
   - event: push
     branch: [feature/*]
