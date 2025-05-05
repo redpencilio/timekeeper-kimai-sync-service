@@ -1,13 +1,21 @@
 steps:
   build-and-push:
-    image: woodpeckerci/plugin-docker-buildx
+    image: woodpeckerci/plugin-docker-buildx:6.0.1
     settings:
-      repo: "${CI_REPO_OWNER%%io}/${CI_REPO_NAME}"
+      repo: ["${CI_REPO_OWNER%%io}/${CI_REPO_NAME}", "oci.redpencil.io/${CI_REPO_OWNER%%io}/${CI_REPO_NAME}"]
       tags: latest
-      username:
-        from_secret: docker_username
-      password:
-        from_secret: docker_password
+      mirror: "https://docker-registry-mirror.redpencil.io"
+      logins:
+        - registry: "https://oci.redpencil.io/"
+          username:
+            from_secret: oci_username
+          password:
+            from_secret: oci_password
+        - registry: "https://index.docker.io/v1/"
+          username:
+            from_secret: docker_username
+          password:
+            from_secret: docker_password
 when:
   - event: push
     branch: [master, main]
