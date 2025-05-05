@@ -1,6 +1,6 @@
 steps:
   build-and-push:
-    image: woodpeckerci/plugin-docker-buildx
+    image: woodpeckerci/plugin-docker-buildx:6.0.1
     settings:
       mirror: "https://docker-registry-mirror.redpencil.io"
       registry: "oci.redpencil.io"
