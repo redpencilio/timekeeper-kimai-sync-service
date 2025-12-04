@@ -67,7 +67,7 @@ export async function lockTimesheets(startDate) {
       updateTimesheetStatus(timesheet, TIMESHEET_STATUSES.EXPORTED);
     } catch (e) {
       const user = workLogsPerTimesheet[timesheet][0]?.user.name;
-      console.log(`Failed to upload all work-logs for timesheet ${month}/${year} of user ${user}`);
+      console.log(`Failed to upload all work-logs for timesheet ${startDate.getMonth() + 1}/${startDate.getFullYear()} of user ${user}`);
     }
   }
 }
