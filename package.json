@@ -1,6 +1,6 @@
 {
   "name": "timekeeper-kimai-sync-service",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "type": "module",
   "description": "Microservice to sync data between Timekeeper and Kimai",
   "main": "app.js",
