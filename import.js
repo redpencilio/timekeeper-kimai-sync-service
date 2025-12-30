@@ -54,7 +54,7 @@ async function upsertActivity(kimaiActivity) {
 
     // Relate activity to project
     if (kimaiActivity.project) {
-      const project = await findKimaiResource('wf:Task', kimaiActivity.project);
+      const project = await findKimaiResource('doap:Project', kimaiActivity.project);
       if (project) {
         await update(`
           ${SPARQL_PREFIXES}
